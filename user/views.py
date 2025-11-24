@@ -1,46 +1,27 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+
+
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework.authtoken.models import Token
-from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from rest_framework import status
+from .serializers import RegisterSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register(request):
-    """
-    Register a new user with email and password.
-    """
-    serializer = RegisterSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        user = serializer.save()
-        token, created = Token.objects.get_or_create(user=user)
-        
-        return Response({
-            'token': token.key,
-            'user': UserSerializer(user).data
-        }, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class RegisterView(APIView):
+    serializer_class = RegisterSerializer  # 
+    def post(self, request):
+
+        serializer = RegisterSerializer(data=request.data)  # 1. Grab the data the user sent (JSON) and pass it to our serializer
+
+        if serializer.is_valid(): # 2. Validate data against Model rules (unique email, max_length) and Field types (valid email format)
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login(request):
-    """
-    Login user with email and password.
-    """
-    serializer = LoginSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
-        
-        return Response({
-            'token': token.key,
-            'user': UserSerializer(user).data
-        }, status=status.HTTP_200_OK)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # TODO: Send verification email
+            
+            user = serializer.save() ## Save the user to the database
+            refresh = RefreshToken.for_user(user) ## Generate JWT tokens
+            return Response({           
+                'refresh': str(refresh),
+                'access': str(refresh.access_token) ## Return the JWT tokens
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) ## Return the errors if the serializer is not valid
