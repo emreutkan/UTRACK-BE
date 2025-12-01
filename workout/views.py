@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer
-from .models import Workout
+from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer
+from .models import Workout, WorkoutExercise, ExerciseSet
 from exercise.models import Exercise
 
 # Create your views here.
@@ -51,6 +51,29 @@ class AddExerciseToWorkoutView(APIView):
         }
         
         serializer = WorkoutExerciseSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AddExerciseSetToWorkoutExerciseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, workout_exercise_id):
+
+        try:
+            workout_exercise = WorkoutExercise.objects.get(id=workout_exercise_id, workout__user=request.user)
+
+        except WorkoutExercise.DoesNotExist:
+            return Response({'error': 'Workout exercise not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        current_sets = workout_exercise.sets.count()
+        set_number = current_sets + 1
+
+        data = request.data.copy()
+        data['workout_exercise'] = workout_exercise.id ## we grab the workout exercise id from the reqest header  POST /api/workout/exercise/5/add_set/
+        data['set_number'] = set_number
+        serializer = ExerciseSetSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

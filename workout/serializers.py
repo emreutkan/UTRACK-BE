@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Workout, WorkoutExercise
+from .models import Workout, WorkoutExercise, ExerciseSet
 from django.utils import timezone
 
 class CreateWorkoutSerializer(serializers.ModelSerializer):
@@ -58,4 +58,10 @@ class WorkoutExerciseSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkoutExercise
         fields = ['id', 'workout', 'exercise', 'order']
+        read_only_fields = ['id']
+
+class ExerciseSetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExerciseSet
+        fields = ['id', 'workout_exercise', 'set_number', 'reps', 'weight', 'rest_time_before_set', 'is_warmup', 'reps_in_reserve']
         read_only_fields = ['id']

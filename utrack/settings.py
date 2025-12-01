@@ -49,6 +49,7 @@ AUTH_USER_MODEL = 'user.CustomUser'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Add CorsMiddleware at the top
+    'utrack.middleware.RequestResponseLogMiddleware', # Add logging middleware
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
