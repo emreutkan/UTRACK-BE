@@ -65,3 +65,9 @@ class ExerciseSetSerializer(serializers.ModelSerializer):
         model = ExerciseSet
         fields = ['id', 'workout_exercise', 'set_number', 'reps', 'weight', 'rest_time_before_set', 'is_warmup', 'reps_in_reserve']
         read_only_fields = ['id']
+
+class GetWorkoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Workout
+        fields = ['id', 'title', 'duration', 'intensity', 'notes', 'is_done', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

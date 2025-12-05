@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer
+from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer, GetWorkoutSerializer # Import GetWorkoutSerializer
 from .models import Workout, WorkoutExercise, ExerciseSet
 from exercise.models import Exercise
 
@@ -33,8 +33,18 @@ class GetWorkoutView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         workouts = Workout.objects.filter(user=request.user).order_by('-created_at')
-        serializer = CreateWorkoutSerializer(workouts, many=True)
+        serializer = GetWorkoutSerializer(workouts, many=True) # Use GetWorkoutSerializer here
         return Response(serializer.data)
+
+
+class GetActiveWorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        active_workout = Workout.objects.filter(user=request.user, is_done=False).first()
+        if active_workout:
+            serializer = CreateWorkoutSerializer(active_workout)
+            return Response(serializer.data)
+        return Response({'error': 'No active workout found'}, status=status.HTTP_404_NOT_FOUND)
 
 class AddExerciseToWorkoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -95,3 +105,4 @@ class AddExerciseSetToWorkoutExerciseView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
