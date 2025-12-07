@@ -22,6 +22,12 @@ A Django REST API for tracking workouts, exercises, and fitness progress.
 - Add notes to workouts
 - Mark workouts as complete
 
+### Supplements
+- Track daily supplement intake
+- Manage supplement inventory
+- Record dosages and timing
+- Link supplements to specific goals
+
 ### Exercise Sets
 - Record reps and weight for each set
 - Track Reps In Reserve (RIR)
@@ -77,6 +83,7 @@ UTrack-BE/
 ├── user/          # User auth, profiles, preferences
 ├── exercise/      # Exercise library & templates
 ├── workout/       # Workouts, sets, tracking
+├── supplements/   # Supplement tracking & inventory
 ├── core/          # Shared models & utilities
 └── utrack/        # Project settings & config
 ```
