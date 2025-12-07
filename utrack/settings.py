@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'user',
     'exercise', # Add exercise app
     'workout', # Add workout app
+    'supplements', # Add supplements app
 ]
 
 AUTH_USER_MODEL = 'user.CustomUser'
