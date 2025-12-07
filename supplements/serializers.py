@@ -1,0 +1,26 @@
+from rest_framework import serializers
+from .models import Supplement, UserSupplement
+
+class SupplementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplement
+        fields = ['id', 'name', 'description', 'dosage_unit', 'default_dosage']
+
+class UserSupplementSerializer(serializers.ModelSerializer):
+    supplement_details = SupplementSerializer(source='supplement', read_only=True)
+    supplement_id = serializers.PrimaryKeyRelatedField(
+        queryset=Supplement.objects.all(), source='supplement', write_only=True
+    )
+
+    class Meta:
+        model = UserSupplement
+        fields = [
+            'id', 
+            'supplement_id', 
+            'supplement_details', 
+            'dosage', 
+            'frequency', 
+            'time_of_day', 
+            'is_active'
+        ]
+
