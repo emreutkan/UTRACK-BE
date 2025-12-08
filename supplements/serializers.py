@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import Supplement, UserSupplement
+from .models import Supplement, UserSupplement, UserSupplementLog
 
 class SupplementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplement
-        fields = ['id', 'name', 'description', 'dosage_unit', 'default_dosage']
+        fields = ['id', 'name', 'description', 'dosage_unit', 'default_dosage', 'bioavailability_score']
 
 class UserSupplementSerializer(serializers.ModelSerializer):
     supplement_details = SupplementSerializer(source='supplement', read_only=True)
@@ -24,3 +24,7 @@ class UserSupplementSerializer(serializers.ModelSerializer):
             'is_active'
         ]
 
+class UserSupplementLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSupplementLog
+        fields = ['id', 'user_supplement', 'date', 'time', 'dosage']
