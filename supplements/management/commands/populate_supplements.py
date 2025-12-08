@@ -278,7 +278,7 @@ class Command(BaseCommand):
                 "description": "Best For: Bone & Tissue Health. Found in animal fats (butter, egg yolks). Good for directing calcium to bones.",
                 "bioavailability_score": "Short (Hours). It disappears from the blood very quickly. You generally need to take it 3 times a day to maintain levels.",
                 "dosage_unit": "mcg",
-                "default_dosage": 45000 # MK-4 is often dosed in high amounts (e.g. 45mg) for therapeutic use, or smaller for general
+                "default_dosage": 45000 
             },
             {
                 "name": "Vitamin K2 (MK-7 / Menaquinone-7)",
@@ -286,6 +286,36 @@ class Command(BaseCommand):
                 "bioavailability_score": "Very High (Days). It stays in your bloodstream for days, building up steady levels with just one dose a day.",
                 "dosage_unit": "mcg",
                 "default_dosage": 100
+            },
+
+            # Omega-3
+            {
+                "name": "Omega-3 (EPA / Eicosapentaenoic Acid)",
+                "description": "Anti-Inflammatory & Mood. It reduces cellular inflammation and competes with pro-inflammatory fats in the body.",
+                "bioavailability_score": "High Turnover. Your body uses it up quickly to fight inflammation. It does not stay in the brain long-term.",
+                "dosage_unit": "mg",
+                "default_dosage": 500
+            },
+            {
+                "name": "Omega-3 (DHA / Docosahexaenoic Acid)",
+                "description": "Structural Brain & Eye Health. It physically builds the cell walls of your neurons and retina.",
+                "bioavailability_score": "High Retention. It is stored in the brain and eyes for the long term. It accumulates in tissues.",
+                "dosage_unit": "mg",
+                "default_dosage": 250
+            },
+            {
+                "name": "Omega-3 (DPA / Docosapentaenoic Acid)",
+                "description": "The 'Missing Link.' A third type found in natural fish oil but often lost in processing. It helps the body absorb EPA and DHA.",
+                "bioavailability_score": "Very High. It is often more potent than EPA for blood vessel repair but is rare in cheap supplements.",
+                "dosage_unit": "mg",
+                "default_dosage": 100
+            },
+            {
+                "name": "Omega-3 (ALA / Alpha-Linolenic Acid)",
+                "description": "Plant Precursor. Found in flax/chia. Your body can turn it into EPA/DHA, but very inefficiently.",
+                "bioavailability_score": "Very Low. Conversion rate is <5%. You would need to eat massive amounts of flax to get the same benefit as a small pill of fish oil.",
+                "dosage_unit": "mg",
+                "default_dosage": 1000
             }
         ]
 
