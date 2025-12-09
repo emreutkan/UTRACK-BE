@@ -25,6 +25,8 @@ class UserSupplementSerializer(serializers.ModelSerializer):
         ]
 
 class UserSupplementLogSerializer(serializers.ModelSerializer):
+    user_supplement_details = UserSupplementSerializer(source='user_supplement', read_only=True)
     class Meta:
         model = UserSupplementLog
-        fields = ['id', 'user_supplement', 'date', 'time', 'dosage']
+        fields = ['id', 'date', 'time', 'dosage']
+    

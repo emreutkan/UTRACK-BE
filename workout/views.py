@@ -31,10 +31,15 @@ class CreateWorkoutView(APIView):
 class GetWorkoutView(APIView):
 
     permission_classes = [IsAuthenticated]
+    def get(self, request, workout_id):
+        workout = Workout.objects.get(id=workout_id, user=request.user)
+        serializer = GetWorkoutSerializer(workout)
+        return Response(serializer.data)
     def get(self, request):
         workouts = Workout.objects.filter(user=request.user).order_by('-created_at')
         serializer = GetWorkoutSerializer(workouts, many=True) # Use GetWorkoutSerializer here
         return Response(serializer.data)
+        
 
 
 class GetActiveWorkoutView(APIView):
@@ -42,7 +47,7 @@ class GetActiveWorkoutView(APIView):
     def get(self, request):
         active_workout = Workout.objects.filter(user=request.user, is_done=False).first()
         if active_workout:
-            serializer = CreateWorkoutSerializer(active_workout)
+            serializer = GetWorkoutSerializer(active_workout)
             return Response(serializer.data)
         return Response({'error': 'No active workout found'}, status=status.HTTP_404_NOT_FOUND)
 
