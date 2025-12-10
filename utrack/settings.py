@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+import os
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,10 +42,20 @@ INSTALLED_APPS = [
     'corsheaders', # Add corsheaders
     'core',
     'rest_framework',
+    'rest_framework.authtoken', # <--- Add this line
     'user',
     'exercise', # Add exercise app
     'workout', # Add workout app
     'supplements', # Add supplements app
+    'django.contrib.sites',       # Required by allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.apple',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    
 ]
 
 AUTH_USER_MODEL = 'user.CustomUser'
@@ -58,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware', 
 ]
 
 ROOT_URLCONF = 'utrack.urls'
@@ -110,7 +123,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
+# Internationalization          
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
@@ -135,8 +148,57 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True # For dev, allow everyone. Safer than listing specific IPs if you move around.
 
+# Add Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth Configuration (matches your CustomUser email-only setup)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional' # or 'mandatory'
+
+# Social Account Providers
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'apple': {
+        'APP': {
+            # Your App ID (Bundle ID) from Apple Developer Console
+            'client_id': os.environ.get('APPLE_CLIENT_ID'),
+            
+            # The Key ID (from the .p8 file details in Apple Developer Console)
+            'secret': os.environ.get('APPLE_KEY_ID'),
+            
+            # Your Apple Team ID
+            'key': os.environ.get('APPLE_TEAM_ID'),
+            
+            # The contents of the .p8 private key file you downloaded from Apple
+            'certificate_key': os.environ.get('APPLE_PRIVATE_KEY')
+        }
+    }
+}
+
+# REST Framework Config (update existing)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication', # Optional, for cookie auth
     ),
 }
+
+# Use JWTs with dj-rest-auth
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_HTTPONLY': False, # <--- Add this line to return refresh token in body
+    # Remove or comment out these cookie settings
+    # 'JWT_AUTH_COOKIE': 'utrack-auth',
+    # 'JWT_AUTH_REFRESH_COOKIE': 'utrack-refresh-token',
+}
+
+SITE_ID = 1

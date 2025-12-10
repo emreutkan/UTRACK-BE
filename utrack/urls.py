@@ -16,10 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from user.social_views import GoogleLogin, AppleLogin # Import the views you just created
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/', include('user.urls')),
     path('api/workout/', include('workout.urls')),
     path('api/supplements/', include('supplements.urls')),
+    path('api/exercise/', include('exercise.url')),
+    path('auth/', include('dj_rest_auth.urls')),
+    path('auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('auth/google/', GoogleLogin.as_view(), name='google_login'),
+    path('auth/apple/', AppleLogin.as_view(), name='apple_login'),
 ]

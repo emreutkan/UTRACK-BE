@@ -30,3 +30,5 @@ class UserSupplementLogSerializer(serializers.ModelSerializer):
         model = UserSupplementLog
         fields = ['id', 'date', 'time', 'dosage']
     
+
+

@@ -10,3 +10,6 @@ urlpatterns = [
     path('user/log/delete/<int:log_id>/', UserSupplementLogDeleteView.as_view(), name='user-supplement-log-delete'),
 ]
 
+
+
+

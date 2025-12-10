@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
 from core.models import TimestampedModel
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 ## Basic info about the models
 
@@ -64,3 +66,14 @@ class Preferences(TimestampedModel):
     auto_warmup_set = models.BooleanField(default=False)
     rest_time = models.PositiveIntegerField(default=90)
     units = models.CharField(max_length=10, choices=[('metric', 'Metric'), ('imperial', 'Imperial')], default='metric')
+
+@receiver(post_save, sender=CustomUser)
+# This function creates the user related records when a new user is created.
+# Current Behavior:  manual registration (RegisterSerializer) does not create these related objects.
+# Social Login Behavior: Social login also won't create them automatically.
+# Solution: Create a receiver function that creates the user related records when a new user is created.
+def create_user_related_records(sender, instance, created, **kwargs):
+    if created:
+        Preferences.objects.create(user=instance)
+        UserProfile.objects.create(user=instance)
+        SecurityStatus.objects.create(user=instance)

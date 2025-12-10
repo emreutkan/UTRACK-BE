@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Workout, WorkoutExercise, ExerciseSet
 from django.utils import timezone
+from exercise.serializers import ExerciseSerializer # Import this at the top
 
 class CreateWorkoutSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,8 +56,13 @@ class CompleteWorkoutSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
+    # This nested serializer will fetch the full exercise details
+    # instead of just the ID.
+    exercise = ExerciseSerializer(read_only=True)
+    
     class Meta:
         model = WorkoutExercise
+        # Now 'exercise' field will contain the full object: { "id": 1, "name": "Bench Press", ... }
         fields = ['id', 'workout', 'exercise', 'order']
         read_only_fields = ['id']
 
@@ -67,7 +73,13 @@ class ExerciseSetSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 class GetWorkoutSerializer(serializers.ModelSerializer):
+    # Add this field to fetch related exercises
+    # Note: 'workoutexercise_set' is the default related name. 
+    # If you want it to be called 'exercises', you can rename it in the SerializerField
+    exercises = WorkoutExerciseSerializer(source='workoutexercise_set', many=True, read_only=True)
+
+
     class Meta:
         model = Workout
-        fields = ['id', 'title', 'duration', 'intensity', 'notes', 'is_done', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'duration', 'intensity', 'notes', 'is_done', 'created_at', 'updated_at', 'exercises'] # Add 'exercises'
         read_only_fields = ['id', 'created_at', 'updated_at']
