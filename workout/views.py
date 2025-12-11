@@ -111,3 +111,26 @@ class AddExerciseSetToWorkoutExerciseView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class DeleteExerciseSetView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, set_id):
+        try:
+            # Ensure the set belongs to a workout owned by the user
+            exercise_set = ExerciseSet.objects.get(id=set_id, workout_exercise__workout__user=request.user)
+            exercise_set.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ExerciseSet.DoesNotExist:
+            return Response({'error': 'Set not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class DeleteWorkoutExerciseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, workout_exercise_id):
+        try:
+            # Ensure the workout exercise belongs to a workout owned by the user
+            workout_exercise = WorkoutExercise.objects.get(id=workout_exercise_id, workout__user=request.user)
+            workout_exercise.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except WorkoutExercise.DoesNotExist:
+            return Response({'error': 'Exercise not found in workout'}, status=status.HTTP_404_NOT_FOUND)

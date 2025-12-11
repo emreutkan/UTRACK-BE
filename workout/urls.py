@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CreateWorkoutView, AddExerciseToWorkoutView, AddExerciseSetToWorkoutExerciseView, GetWorkoutView, GetActiveWorkoutView
+from .views import CreateWorkoutView, AddExerciseToWorkoutView, AddExerciseSetToWorkoutExerciseView, GetWorkoutView, GetActiveWorkoutView, DeleteExerciseSetView, DeleteWorkoutExerciseView
 
 urlpatterns = [
     path('create/', CreateWorkoutView.as_view(), name='create-workout'),
@@ -8,5 +8,6 @@ urlpatterns = [
     path('exercise/<int:workout_exercise_id>/add_set/', AddExerciseSetToWorkoutExerciseView.as_view(), name='add-set'),
     path('active/', GetActiveWorkoutView.as_view(), name='get-active-workout'),     
     path('list/<int:workout_id>/', GetWorkoutView.as_view(), name='get-workout'),
+    path('set/<int:set_id>/delete/', DeleteExerciseSetView.as_view(), name='delete-set'),
+    path('exercise/<int:workout_exercise_id>/delete/', DeleteWorkoutExerciseView.as_view(), name='delete-workout-exercise'),
 ]
-
