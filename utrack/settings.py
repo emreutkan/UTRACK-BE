@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 
 import os
+import warnings
+
+# Suppress specific warnings from dj_rest_auth regarding allauth deprecations
+warnings.filterwarnings('ignore', message='.*app_settings.USERNAME_REQUIRED is deprecated.*')
+warnings.filterwarnings('ignore', message='.*app_settings.EMAIL_REQUIRED is deprecated.*')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -156,9 +161,8 @@ AUTHENTICATION_BACKENDS = [
 
 # Allauth Configuration (matches your CustomUser email-only setup)
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # or 'mandatory'
 
 # Social Account Providers
