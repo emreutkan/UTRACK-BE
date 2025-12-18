@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from core.models import TimestampedModel
 # Create your models here.
@@ -8,10 +9,12 @@ from exercise.models import Exercise
 class Workout(TimestampedModel):
     title = models.CharField(max_length=255)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    datetime = models.DateTimeField(default=timezone.now)  # When the workout actually happened (defaults to created_at if not specified)
     duration = models.PositiveIntegerField(default=0) ## duration is the time in seconds that the workout took
     intensity = models.CharField(max_length=255, choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')]) ## intensity is the intensity of the workout
     notes = models.TextField(blank=True, null=True) ## notes is a text field that the user can add to the workout
     is_done = models.BooleanField(default=False) ## is_done is a boolean field that indicates whether the workout has been completed
+    is_rest_day = models.BooleanField(default=False) ## is_rest_day marks the workout as a rest day but it still counts as a workout
 ##    body_parts_worked = models.JSONField(default=list, blank=True, null=True) ## body_parts_worked is a json field that contains the body parts worked in the workout
 
 

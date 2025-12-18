@@ -1,23 +1,58 @@
 from rest_framework import serializers
 from .models import Workout, WorkoutExercise, ExerciseSet
 from django.utils import timezone
-from exercise.serializers import ExerciseSerializer # Import this at the top
+from datetime import datetime
+from exercise.serializers import ExerciseSerializer
 
 class CreateWorkoutSerializer(serializers.ModelSerializer):
+    workout_date = serializers.DateTimeField(required=False, write_only=True)  # Accept datetime
+    date = serializers.DateTimeField(required=False, write_only=True)  # Also accept 'date' for compatibility
+    title = serializers.CharField(required=False)  # Make title optional
+    
     class Meta:
         model = Workout
-        fields = ['id', 'title'] # id is included but we dont send it from the frontend to the backend
-        read_only_fields = ['id'] # then why did we write it in the class Meta? because we want to include it in the response
+        fields = ['id', 'title', 'workout_date', 'date', 'is_done', 'is_rest_day']
+        read_only_fields = ['id']
+    
+    def validate(self, data):
+        # If it's a rest day, ignore title and is_done from request
+        if data.get('is_rest_day', False):
+            # Remove title and is_done if provided (we'll set them automatically)
+            data.pop('title', None)
+            data.pop('is_done', None)
+        return data
 
     def create(self, validated_data):
         user = self.context['request'].user
-        current_date = timezone.now().date()
+        is_rest_day = validated_data.get('is_rest_day', False)
+        
+        # Accept either 'workout_date' or 'date'
+        workout_datetime = validated_data.pop('workout_date', None) or validated_data.pop('date', None)
+        
+        # Get workout datetime (provided or default to now, which will match created_at)
+        if workout_datetime:
+            # If it's a naive datetime, make it timezone-aware
+            if timezone.is_naive(workout_datetime):
+                workout_datetime = timezone.make_aware(workout_datetime)
+            # Set the datetime field
+            validated_data['datetime'] = workout_datetime
+            workout_date = workout_datetime.date()
+        else:
+            # If not provided, use current time (will be same as created_at)
+            current_time = timezone.now()
+            validated_data['datetime'] = current_time
+            workout_date = current_time.date()
         
         # Handle title logic
-        if not validated_data.get('title'):
-            validated_data['title'] = current_date.strftime("%B, %d")
-            
-        # Create with user
+        if is_rest_day:
+            # Rest days always have title "Rest Day"
+            validated_data['title'] = "Rest Day"
+            validated_data['is_done'] = True
+        elif not validated_data.get('title'):
+            # Regular workouts default to date format
+            validated_data['title'] = workout_date.strftime("%B, %d")
+        
+        # Create workout
         workout = Workout.objects.create(
             user=user,
             **validated_data
@@ -83,5 +118,5 @@ class GetWorkoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workout
-        fields = ['id', 'title', 'duration', 'intensity', 'notes', 'is_done', 'created_at', 'updated_at', 'exercises'] # Add 'exercises'
+        fields = ['id', 'title', 'datetime', 'duration', 'intensity', 'notes', 'is_done', 'is_rest_day', 'created_at', 'updated_at', 'exercises'] # Add 'exercises'
         read_only_fields = ['id', 'created_at', 'updated_at']

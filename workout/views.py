@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
+from datetime import datetime, time
 from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer, GetWorkoutSerializer # Import GetWorkoutSerializer
 from .models import Workout, WorkoutExercise, ExerciseSet
 from exercise.models import Exercise
@@ -13,14 +15,100 @@ class CreateWorkoutView(APIView):
     permission_classes = [IsAuthenticated]
    
     def post(self, request):
-        # Change this line to .first() instead of .exists()
         active_workout = Workout.objects.filter(user=request.user, is_done=False).first()
         
-        if active_workout:
+        # Check if new workout is a rest day (rest days are automatically set as is_done=True)
+        is_rest_day = request.data.get('is_rest_day', False)
+        
+        # Check if new workout is being created as active (is_done: false or not set)
+        new_workout_is_done = request.data.get('is_done', False)  # Defaults to False if not provided
+        
+        # Parse workout date to check for rest day conflicts
+        workout_datetime_str = request.data.get('workout_date') or request.data.get('date')
+        workout_date = None
+        
+        if workout_datetime_str:
+            try:
+                # Parse the datetime (handle ISO datetime string)
+                if 'T' in workout_datetime_str:
+                    # Handle ISO format with Z (UTC) or timezone
+                    if workout_datetime_str.endswith('Z'):
+                        workout_datetime = datetime.fromisoformat(workout_datetime_str.replace('Z', '+00:00'))
+                    else:
+                        workout_datetime = datetime.fromisoformat(workout_datetime_str)
+                    
+                    # Make timezone-aware if needed
+                    if timezone.is_naive(workout_datetime):
+                        workout_datetime = timezone.make_aware(workout_datetime)
+                    workout_date = workout_datetime.date()
+                else:
+                    # Try parsing as date only
+                    from django.utils.dateparse import parse_date
+                    workout_date = parse_date(workout_datetime_str)
+            except (ValueError, TypeError):
+                pass
+        else:
+            # No date provided = current date
+            workout_date = timezone.now().date()
+        
+        # Check for rest day conflicts
+        if workout_date:
+            # If creating a rest day, check if any workout exists for that date
+            if is_rest_day:
+                existing_workout = Workout.objects.filter(
+                    user=request.user,
+                    datetime__date=workout_date
+                ).first()
+                
+                if existing_workout:
+                    return Response({
+                        'error': 'WORKOUT_EXISTS_FOR_DATE',
+                        'message': f'A workout already exists for {workout_date}. Cannot create a rest day for this date.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # If creating a regular workout, check if a rest day exists for that date
+            else:
+                existing_rest_day = Workout.objects.filter(
+                    user=request.user,
+                    datetime__date=workout_date,
+                    is_rest_day=True
+                ).first()
+                
+                if existing_rest_day:
+                    return Response({
+                        'error': 'REST_DAY_EXISTS_FOR_DATE',
+                        'message': f'A rest day already exists for {workout_date}. Cannot create a workout for this date.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Allow rest days even if there's an active workout (they're automatically completed)
+        if active_workout and not new_workout_is_done and not is_rest_day:
+            # Block creating a new active workout if one already exists
             return Response({
                 'error': 'ACTIVE_WORKOUT_EXISTS',
-                'active_workout': active_workout.id
-                }, status=status.HTTP_400_BAD_REQUEST)
+                'active_workout': active_workout.id,
+                'message': 'Cannot create a new active workout. Complete or delete the existing active workout first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if active_workout and new_workout_is_done and not is_rest_day:
+            # If creating a completed workout (not rest day), check datetime to ensure it's not after active workout
+            if workout_date:
+                try:
+                    # Convert date back to datetime for comparison
+                    workout_datetime = timezone.make_aware(datetime.combine(workout_date, time.min))
+                    
+                    # Get active workout's datetime (use datetime field, fallback to created_at)
+                    active_workout_datetime = getattr(active_workout, 'datetime', active_workout.created_at)
+                    
+                    # Block if new workout datetime is after active workout's datetime
+                    if workout_datetime and workout_datetime > active_workout_datetime:
+                        return Response({
+                            'error': 'ACTIVE_WORKOUT_EXISTS',
+                            'active_workout': active_workout.id,
+                            'message': f'Cannot create workout at {workout_datetime} after active workout at {active_workout_datetime}'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                except (ValueError, TypeError) as e:
+                    # If datetime parsing fails, allow it (completed workout)
+                    pass
                 
         serializer = CreateWorkoutSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -31,14 +119,21 @@ class CreateWorkoutView(APIView):
 class GetWorkoutView(APIView):
 
     permission_classes = [IsAuthenticated]
-    def get(self, request, workout_id):
-        workout = Workout.objects.get(id=workout_id, user=request.user)
-        serializer = GetWorkoutSerializer(workout)
-        return Response(serializer.data)
-    def get(self, request):
-        workouts = Workout.objects.filter(user=request.user).order_by('-created_at')
-        serializer = GetWorkoutSerializer(workouts, many=True) # Use GetWorkoutSerializer here
-        return Response(serializer.data)
+    
+    def get(self, request, workout_id=None):
+        if workout_id:
+            # Get specific workout
+            try:
+                workout = Workout.objects.get(id=workout_id, user=request.user)
+                serializer = GetWorkoutSerializer(workout)
+                return Response(serializer.data)
+            except Workout.DoesNotExist:
+                return Response({'error': 'Workout not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Get all workouts (only completed ones, exclude rest days)
+            workouts = Workout.objects.filter(user=request.user, is_done=True, is_rest_day=False).order_by('-created_at')
+            serializer = GetWorkoutSerializer(workouts, many=True)
+            return Response(serializer.data)
         
 
 
@@ -163,3 +258,113 @@ class UpdateExerciseOrderView(APIView):
             return Response(status=status.HTTP_200_OK)
         except Workout.DoesNotExist:
             return Response({'error': 'Workout not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class CompleteWorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, workout_id):
+        try:
+            workout = Workout.objects.get(id=workout_id, user=request.user)
+            
+            if workout.is_done:
+                return Response({'error': 'Workout is already completed'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Update fields if provided
+            if 'duration' in request.data:
+                try:
+                    workout.duration = int(request.data['duration'])
+                except (ValueError, TypeError):
+                    return Response({'error': 'Duration must be an integer (seconds)'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if 'intensity' in request.data:
+                workout.intensity = request.data['intensity']
+            if 'notes' in request.data:
+                workout.notes = request.data['notes']
+                
+            workout.is_done = True
+            workout.save()
+            
+            return Response(GetWorkoutSerializer(workout).data, status=status.HTTP_200_OK)
+        except Workout.DoesNotExist:
+            return Response({'error': 'Workout not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class DeleteWorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, workout_id):
+        try:
+            workout = Workout.objects.get(id=workout_id, user=request.user)
+            workout.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Workout.DoesNotExist:
+            return Response({'error': 'Workout not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class WorkoutsInTimeFrameView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,):
+        if request.week_number and request.month and request.year:
+            workouts = Workout.objects.filter(user=request.user, is_done=True, is_rest_day=False, datetime__week=request.week_number, datetime__month=request.month, datetime__year=request.year).order_by('-created_at')
+            serializer = GetWorkoutSerializer(workouts, many=True)
+            return Response(serializer.data)
+        elif request.month and request.year:
+            workouts = Workout.objects.filter(user=request.user, is_done=True, is_rest_day=False, datetime__month=request.month, datetime__year=request.year).order_by('-created_at')
+            serializer = GetWorkoutSerializer(workouts, many=True)
+            return Response(serializer.data)
+        elif request.year:
+            workouts = Workout.objects.filter(user=request.user, is_done=True, is_rest_day=False, datetime__year=request.year).order_by('-created_at')
+            serializer = GetWorkoutSerializer(workouts, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+
+class TotalWorkoutsPerformedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        
+        total_workouts = Workout.objects.filter(user=request.user, is_done=True).count()
+                ## get how many days past since the first workout was performed
+        first_workout = Workout.objects.filter(user=request.user, is_done=True).order_by('created_at').first()
+        if first_workout:
+            days_past = (timezone.now() - first_workout.created_at).days
+            weeks_past = days_past / 7
+        else:
+            days_past = 1
+            weeks_past = 1
+        ## get the average number of workouts per day
+        average_workouts_per_week = total_workouts / weeks_past
+        ## get how many days has past in this year 
+        days_past_in_year = (timezone.now().date() - datetime(timezone.now().year, 1, 1).date()).days
+        ## get how many workouts have been performed in this year
+        workouts_performed_in_year = Workout.objects.filter(user=request.user, is_done=True, datetime__year=timezone.now().year).count()
+        ## get the amount of days that user did not perform a workout
+        days_not_performed_a_workout = days_past_in_year - workouts_performed_in_year
+        return Response(
+            {'total_workouts': total_workouts,
+             'days_past': days_past,
+             'weeks_past': weeks_past,
+             'average_workouts_per_week': average_workouts_per_week,
+             'days_not_performed_a_workout': days_not_performed_a_workout,
+             'workouts_performed_in_year': workouts_performed_in_year,
+             'days_past_in_year': days_past_in_year})
+
+class CheckTodayRestDayView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today = timezone.now().date()
+        rest_day = Workout.objects.filter(
+            user=request.user,
+            datetime__date=today,
+            is_rest_day=True
+        ).first()
+        
+        return Response({
+            'is_rest_day': rest_day is not None,
+            'date': today.isoformat(),
+            'rest_day_id': rest_day.id if rest_day else None
+        })
+
+    
