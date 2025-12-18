@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+import json
 
 from core.models import TimestampedModel
 # Create your models here.
@@ -58,3 +59,47 @@ class TemplateWorkoutExercise(TimestampedModel):
 
     class Meta:
         ordering = ['order']
+
+class TrainingResearch(TimestampedModel):
+    """Research-backed training information and recommendations"""
+    title = models.CharField(max_length=255)
+    summary = models.TextField()
+    content = models.TextField()
+    
+    CATEGORY_CHOICES = [
+        ('INTENSITY_GUIDELINES', 'Intensity Guidelines'),
+        ('PROTEIN_SYNTHESIS', 'Protein Synthesis'),
+        ('MUSCLE_GROUPS', 'Muscle Groups'),
+        ('MUSCLE_RECOVERY', 'Muscle Recovery'),
+        ('REST_PERIODS', 'Rest Periods'),
+        ('TRAINING_FREQUENCY', 'Training Frequency'),
+    ]
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    tags = models.JSONField(default=list, blank=True)
+    
+    # Source information
+    source_title = models.CharField(max_length=255, blank=True, null=True)
+    source_url = models.URLField(blank=True, null=True)
+    source_authors = models.JSONField(default=list, blank=True)
+    publication_date = models.DateField(blank=True, null=True)
+    
+    # Evidence quality
+    evidence_level = models.CharField(max_length=50, blank=True, null=True)  # high, moderate, low
+    confidence_score = models.DecimalField(max_digits=3, decimal_places=2, default=0.0)  # 0.0 to 1.0
+    
+    # Applicability
+    applicable_muscle_groups = models.JSONField(default=list, blank=True)  # ["chest", "back", "all"]
+    applicable_exercise_types = models.JSONField(default=list, blank=True)  # ["compound", "isolation", "all"]
+    
+    # Parameters (JSON field for flexible data storage)
+    parameters = models.JSONField(default=dict, blank=True)  # e.g., {"recovery_time_hours": 48, "optimal_rpe_range": [7, 9]}
+    
+    is_active = models.BooleanField(default=True)
+    is_validated = models.BooleanField(default=False)
+    priority = models.IntegerField(default=0)  # Higher priority = shown first
+    
+    class Meta:
+        ordering = ['-priority', '-created_at']
+    
+    def __str__(self):
+        return self.title

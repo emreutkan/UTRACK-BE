@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Workout, WorkoutExercise, ExerciseSet, TemplateWorkout, TemplateWorkoutExercise
+from .models import Workout, WorkoutExercise, ExerciseSet, TemplateWorkout, TemplateWorkoutExercise, TrainingResearch
 from django.utils import timezone
 from datetime import datetime
 from exercise.serializers import ExerciseSerializer
@@ -260,3 +260,15 @@ class GetTemplateWorkoutSerializer(serializers.ModelSerializer):
                     if muscle:
                         secondary_muscles.add(muscle)
         return sorted(list(secondary_muscles))
+
+class TrainingResearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingResearch
+        fields = [
+            'id', 'title', 'summary', 'content', 'category', 'tags',
+            'source_title', 'source_url', 'source_authors', 'publication_date',
+            'evidence_level', 'confidence_score', 'applicable_muscle_groups',
+            'applicable_exercise_types', 'parameters', 'is_active', 'is_validated',
+            'priority', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
