@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Workout, WorkoutExercise, ExerciseSet
+from .models import Workout, WorkoutExercise, ExerciseSet, TemplateWorkout, TemplateWorkoutExercise
 from django.utils import timezone
 from datetime import datetime
 from exercise.serializers import ExerciseSerializer
@@ -120,3 +120,80 @@ class GetWorkoutSerializer(serializers.ModelSerializer):
         model = Workout
         fields = ['id', 'title', 'datetime', 'duration', 'intensity', 'notes', 'is_done', 'is_rest_day', 'created_at', 'updated_at', 'exercises'] # Add 'exercises'
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class TemplateWorkoutExerciseSerializer(serializers.ModelSerializer):
+    exercise = ExerciseSerializer(read_only=True)
+    
+    class Meta:
+        model = TemplateWorkoutExercise
+        fields = ['id', 'exercise', 'order']
+        read_only_fields = ['id']
+
+class CreateTemplateWorkoutSerializer(serializers.ModelSerializer):
+    exercises = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        help_text="List of exercise IDs"
+    )
+    
+    class Meta:
+        model = TemplateWorkout
+        fields = ['id', 'title', 'exercises', 'notes']
+        read_only_fields = ['id']
+    
+    def create(self, validated_data):
+        user = self.context['request'].user
+        exercise_ids = validated_data.pop('exercises', [])
+        
+        # Create template workout
+        template_workout = TemplateWorkout.objects.create(
+            user=user,
+            **validated_data
+        )
+        
+        # Add exercises with order
+        for order, exercise_id in enumerate(exercise_ids, start=1):
+            from exercise.models import Exercise
+            try:
+                exercise = Exercise.objects.get(id=exercise_id)
+                TemplateWorkoutExercise.objects.create(
+                    template_workout=template_workout,
+                    exercise=exercise,
+                    order=order
+                )
+            except Exercise.DoesNotExist:
+                continue  # Skip invalid exercise IDs
+        
+        return template_workout
+
+class GetTemplateWorkoutSerializer(serializers.ModelSerializer):
+    exercises = TemplateWorkoutExerciseSerializer(source='templateworkoutexercise_set', many=True, read_only=True)
+    primary_muscle_groups = serializers.SerializerMethodField()
+    secondary_muscle_groups = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TemplateWorkout
+        fields = ['id', 'title', 'exercises', 'primary_muscle_groups', 'secondary_muscle_groups', 'notes', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_primary_muscle_groups(self, obj):
+        """Get unique primary muscle groups from all exercises"""
+        template_exercises = TemplateWorkoutExercise.objects.filter(template_workout=obj).select_related('exercise')
+        primary_muscles = set()
+        for template_exercise in template_exercises:
+            exercise = template_exercise.exercise
+            if exercise.primary_muscle:
+                primary_muscles.add(exercise.primary_muscle)
+        return sorted(list(primary_muscles))
+    
+    def get_secondary_muscle_groups(self, obj):
+        """Get unique secondary muscle groups from all exercises"""
+        template_exercises = TemplateWorkoutExercise.objects.filter(template_workout=obj).select_related('exercise')
+        secondary_muscles = set()
+        for template_exercise in template_exercises:
+            exercise = template_exercise.exercise
+            if exercise.secondary_muscles:
+                for muscle in exercise.secondary_muscles:
+                    if muscle:
+                        secondary_muscles.add(muscle)
+        return sorted(list(secondary_muscles))

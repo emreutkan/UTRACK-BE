@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CreateWorkoutView, AddExerciseToWorkoutView, AddExerciseSetToWorkoutExerciseView, GetWorkoutView, GetActiveWorkoutView, DeleteExerciseSetView, DeleteWorkoutExerciseView, UpdateExerciseOrderView, CompleteWorkoutView, DeleteWorkoutView, CheckTodayRestDayView
+from .views import CreateWorkoutView, AddExerciseToWorkoutView, AddExerciseSetToWorkoutExerciseView, GetWorkoutView, GetActiveWorkoutView, DeleteExerciseSetView, DeleteWorkoutExerciseView, UpdateExerciseOrderView, CompleteWorkoutView, DeleteWorkoutView, CheckTodayRestDayView, CreateTemplateWorkoutView, GetTemplateWorkoutsView, StartTemplateWorkoutView
 urlpatterns = [
     path('create/', CreateWorkoutView.as_view(), name='create-workout'),
     path('list/', GetWorkoutView.as_view(), name='list-workouts'),
@@ -14,4 +14,8 @@ urlpatterns = [
     path('<int:workout_id>/complete/', CompleteWorkoutView.as_view(), name='complete-workout'),
     path('<int:workout_id>/delete/', DeleteWorkoutView.as_view(), name='delete-workout'),
     path('check-rest-day/', CheckTodayRestDayView.as_view(), name='check-today-rest-day'),
+    # Template workout endpoints
+    path('template/create/', CreateTemplateWorkoutView.as_view(), name='create-template-workout'),
+    path('template/list/', GetTemplateWorkoutsView.as_view(), name='list-template-workouts'),
+    path('template/start/', StartTemplateWorkoutView.as_view(), name='start-template-workout'),
 ]

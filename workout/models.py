@@ -45,6 +45,7 @@ class TemplateWorkout(TimestampedModel):
     title = models.CharField(max_length=255)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     exercises = models.ManyToManyField(Exercise, through='TemplateWorkoutExercise')
+    notes = models.TextField(blank=True, null=True)  # Optional notes for the template
 
     def __str__(self):
         return self.title

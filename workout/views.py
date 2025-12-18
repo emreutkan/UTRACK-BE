@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from datetime import datetime, time
-from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer, GetWorkoutSerializer # Import GetWorkoutSerializer
-from .models import Workout, WorkoutExercise, ExerciseSet
+from .serializers import CreateWorkoutSerializer, WorkoutExerciseSerializer, ExerciseSetSerializer, GetWorkoutSerializer, CreateTemplateWorkoutSerializer, GetTemplateWorkoutSerializer # Import GetWorkoutSerializer
+from .models import Workout, WorkoutExercise, ExerciseSet, TemplateWorkout, TemplateWorkoutExercise
 from exercise.models import Exercise
 
 # Create your views here.
@@ -366,5 +366,72 @@ class CheckTodayRestDayView(APIView):
             'date': today.isoformat(),
             'rest_day_id': rest_day.id if rest_day else None
         })
+
+class CreateTemplateWorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        serializer = CreateTemplateWorkoutSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            template_workout = serializer.save()
+            # Return with calculated muscle groups
+            response_serializer = GetTemplateWorkoutSerializer(template_workout)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetTemplateWorkoutsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        template_workouts = TemplateWorkout.objects.filter(user=request.user).order_by('-created_at')
+        serializer = GetTemplateWorkoutSerializer(template_workouts, many=True)
+        return Response(serializer.data)
+
+class StartTemplateWorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        template_workout_id = request.data.get('template_workout_id')
+        
+        if not template_workout_id:
+            return Response({'error': 'template_workout_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            template_workout = TemplateWorkout.objects.get(id=template_workout_id, user=request.user)
+        except TemplateWorkout.DoesNotExist:
+            return Response({'error': 'Template workout not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if there's already an active workout
+        active_workout = Workout.objects.filter(user=request.user, is_done=False).first()
+        if active_workout:
+            return Response({
+                'error': 'ACTIVE_WORKOUT_EXISTS',
+                'active_workout': active_workout.id,
+                'message': 'Cannot start a new workout. Complete or delete the existing active workout first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create new active workout
+        workout = Workout.objects.create(
+            user=request.user,
+            title=template_workout.title,
+            is_done=False,
+            notes=template_workout.notes  # Copy notes from template
+        )
+        
+        # Add exercises from template to workout
+        template_exercises = TemplateWorkoutExercise.objects.filter(
+            template_workout=template_workout
+        ).order_by('order')
+        
+        for template_exercise in template_exercises:
+            WorkoutExercise.objects.create(
+                workout=workout,
+                exercise=template_exercise.exercise,
+                order=template_exercise.order
+            )
+        
+        # Return the created workout
+        serializer = GetWorkoutSerializer(workout)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     
