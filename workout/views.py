@@ -61,6 +61,15 @@ def calculate_one_rep_max(weight, reps):
     one_rm = float(weight) / denominator
     return round(one_rm, 2)
 
+def calculate_workout_calories(workout):
+    """
+    Calculate total calories burned for a workout using MET method.
+    Delegates to the workout model's calculate_calories method.
+    
+    Returns: Total calories burned (float)
+    """
+    return workout.calculate_calories()
+
 def calculate_workout_exercise_1rm(workout_exercise):
     """
     Calculate 1RM for a workout exercise.
@@ -419,7 +428,6 @@ class CompleteWorkoutView(APIView):
                 workout.notes = request.data['notes']
 
             workout.is_done = True
-            workout.save()
             
             # Calculate 1RM for all exercises in the workout
             workout_exercises = WorkoutExercise.objects.filter(workout=workout)
@@ -428,6 +436,11 @@ class CompleteWorkoutView(APIView):
                 if one_rm is not None:
                     workout_exercise.one_rep_max = one_rm
                     workout_exercise.save()
+            
+            # Calculate calories burned
+            calories_burned = calculate_workout_calories(workout)
+            workout.calories_burned = calories_burned
+            workout.save()
 
             return Response(GetWorkoutSerializer(workout).data, status=status.HTTP_200_OK)
         except Workout.DoesNotExist:
@@ -727,6 +740,77 @@ class CheckTodayRestDayView(APIView):
             'date': today.isoformat(),
             'rest_day_id': rest_day.id if rest_day else None
         })
+
+class CheckWorkoutPerformedTodayView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Check if a workout was performed today.
+        
+        Returns:
+        - If active workout exists (is_done=False): Error with active workout info
+        - If rest day: Rest day info
+        - If workout performed: Workout details
+        - If nothing: No workout performed today
+        """
+        today = timezone.now().date()
+        
+        # Check for any workout today (completed or not)
+        today_workouts = Workout.objects.filter(
+            user=request.user,
+            datetime__date=today
+        ).order_by('-datetime')
+        
+        if not today_workouts.exists():
+            return Response({
+                'workout_performed': False,
+                'date': today.isoformat(),
+                'message': 'No workout performed today'
+            }, status=status.HTTP_200_OK)
+        
+        # Check for active workout (not completed)
+        active_workout = today_workouts.filter(is_done=False).first()
+        
+        if active_workout:
+            return Response({
+                'error': 'ACTIVE_WORKOUT_EXISTS',
+                'workout_performed': False,
+                'active_workout_id': active_workout.id,
+                'active_workout_title': active_workout.title,
+                'message': 'Active workout exists but not completed yet'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check for completed workouts (rest day or regular workout)
+        completed_workout = today_workouts.filter(is_done=True).first()
+        
+        if completed_workout:
+            if completed_workout.is_rest_day:
+                return Response({
+                    'workout_performed': True,
+                    'is_rest_day': True,
+                    'date': today.isoformat(),
+                    'rest_day_id': completed_workout.id,
+                    'rest_day_title': completed_workout.title,
+                    'message': 'Rest day today'
+                }, status=status.HTTP_200_OK)
+            else:
+                # Regular workout performed
+                workout_data = GetWorkoutSerializer(completed_workout).data
+                return Response({
+                    'workout_performed': True,
+                    'is_rest_day': False,
+                    'date': today.isoformat(),
+                    'workout': workout_data,
+                    'message': 'Workout performed today'
+                }, status=status.HTTP_200_OK)
+        
+        # Fallback (shouldn't reach here)
+        return Response({
+            'workout_performed': False,
+            'date': today.isoformat(),
+            'message': 'No workout performed today'
+        }, status=status.HTTP_200_OK)
 
 class CreateTemplateWorkoutView(APIView):
     permission_classes = [IsAuthenticated]

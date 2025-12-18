@@ -49,6 +49,7 @@ class CustomUser(AbstractUser, TimestampedModel):
 
 class UserProfile(TimestampedModel):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    body_weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Body weight in kg for calorie calculations")
 
 class SecurityStatus(TimestampedModel):
     """

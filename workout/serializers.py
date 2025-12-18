@@ -150,7 +150,7 @@ class GetWorkoutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workout
-        fields = ['id', 'title', 'datetime', 'duration', 'intensity', 'notes', 'is_done', 'is_rest_day', 'created_at', 'updated_at', 'exercises', 'total_volume', 'primary_muscles_worked', 'secondary_muscles_worked']
+        fields = ['id', 'title', 'datetime', 'duration', 'intensity', 'notes', 'is_done', 'is_rest_day', 'calories_burned', 'created_at', 'updated_at', 'exercises', 'total_volume', 'primary_muscles_worked', 'secondary_muscles_worked']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_total_volume(self, obj):
