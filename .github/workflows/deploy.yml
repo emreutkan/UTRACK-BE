@@ -23,11 +23,11 @@ jobs:
           SERVICE_FILE="/etc/systemd/system/utrack.service"
           cd "$PROJECT_DIR"
           
-          # 1. Force pull latest code (Fixing divergent branches)
+          # 1. Force pull latest code
           git fetch origin master
           git reset --hard origin/master
           
-          # 2. Update .env file (Removed extra quotes for better systemd compatibility)
+          # 2. Update .env file
           echo "SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" > .env
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
@@ -37,8 +37,6 @@ jobs:
           echo "DEBUG=False" >> .env
           echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
 
-          # 3. RE-CONFIGURING THE SERVICE (Kill the hardcoded values)
-          # This ensures the service reads the .env file instead of hardcoded strings
           sudo bash -c "cat > $SERVICE_FILE <<EOF
           [Unit]
           Description=UTrack Django application
@@ -56,25 +54,22 @@ jobs:
           WantedBy=multi-user.target
           EOF"
 
-          # 4. Reload Systemd to recognize the service change
           sudo systemctl daemon-reload
 
-          # 5. DB Permissions Fix
           sudo -u postgres psql -d ${{ secrets.DB_NAME }} -c "GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};" || true
           sudo -u postgres psql -d ${{ secrets.DB_NAME }} -c "ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};" || true
 
-          # 6. Update Dependencies
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
           
-          # 7. Django Tasks
-          export \$(grep -v '^#' .env | xargs)
+          set -a
+          source .env
+          set +a
           python3 manage.py migrate --noinput
           python3 manage.py collectstatic --noinput
           
-          # 8. Restart everything
           sudo systemctl restart utrack
           sudo systemctl restart nginx
           
-          echo "✅ Deployment successful. Infrastructure sync complete."
+          echo "✅ Deployment successful. Service rebuilt and restarted!"
