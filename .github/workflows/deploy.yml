@@ -28,7 +28,7 @@ jobs:
           
           # Install system dependencies
           sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3.14 python3.14-venv python3-pip postgresql postgresql-contrib git libpq-dev python3-dev
+          sudo apt install -y python3.12 python3.12-venv python3-pip postgresql postgresql-contrib git libpq-dev python3-dev
 
           # Clone or update repository
           if [ ! -d "$PROJECT_DIR" ]; then
