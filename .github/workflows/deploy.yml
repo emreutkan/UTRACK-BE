@@ -55,4 +55,4 @@ jobs:
           # 7. Restart Gunicorn
           sudo systemctl restart utrack
           
-          echo "✅ Deployment completed successfully!"
+          echo "Deployment completed successfully!"
