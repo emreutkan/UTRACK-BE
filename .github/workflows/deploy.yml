@@ -69,7 +69,6 @@ jobs:
           # DB_PASSWORD is required - fail if not provided
           if [ -z "$DB_PASSWORD" ]; then
             echo "ERROR: DB_PASSWORD secret is required but not set!"
-            echo "Please add DB_PASSWORD to your GitHub repository secrets."
             exit 1
           fi
           
@@ -105,8 +104,7 @@ jobs:
           
           # SECRET_KEY is required - fail if not provided
           if [ -z "$SECRET_KEY" ]; then
-            echo "❌ ERROR: DJANGO_SECRET_KEY secret is required but not set!"
-            echo "Please add DJANGO_SECRET_KEY to your GitHub repository secrets."
+            echo "ERROR: DJANGO_SECRET_KEY secret is required but not set!"
             exit 1
           fi
           
@@ -135,9 +133,6 @@ jobs:
           
 
           # Setup systemd service for Gunicorn
-          # Use printf %q to properly escape SECRET_KEY for safe use in heredoc
-          ESCAPED_SECRET_KEY=$(printf '%q' "$SECRET_KEY")
-          
           sudo tee /etc/systemd/system/utrack.service > /dev/null << EOF
           [Unit]
           Description=UTrack Django application
@@ -148,7 +143,7 @@ jobs:
           Group=www-data
           WorkingDirectory=$PROJECT_DIR
           Environment="PATH=$PROJECT_DIR/venv/bin"
-          Environment="SECRET_KEY=${ESCAPED_SECRET_KEY}"
+          Environment="SECRET_KEY=$SECRET_KEY"
           Environment="DEBUG=False"
           Environment="DB_NAME=$DB_NAME"
           Environment="DB_USER=$DB_USER"
