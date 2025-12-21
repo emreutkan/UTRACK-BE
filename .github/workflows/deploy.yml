@@ -135,6 +135,9 @@ jobs:
           
 
           # Setup systemd service for Gunicorn
+          # Use printf %q to properly escape SECRET_KEY for safe use in heredoc
+          ESCAPED_SECRET_KEY=$(printf '%q' "$SECRET_KEY")
+          
           sudo tee /etc/systemd/system/utrack.service > /dev/null << EOF
           [Unit]
           Description=UTrack Django application
@@ -145,7 +148,7 @@ jobs:
           Group=www-data
           WorkingDirectory=$PROJECT_DIR
           Environment="PATH=$PROJECT_DIR/venv/bin"
-          Environment="SECRET_KEY=$SECRET_KEY"
+          Environment="SECRET_KEY=${ESCAPED_SECRET_KEY}"
           Environment="DEBUG=False"
           Environment="DB_NAME=$DB_NAME"
           Environment="DB_USER=$DB_USER"
