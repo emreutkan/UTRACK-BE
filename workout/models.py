@@ -323,6 +323,7 @@ class TrainingResearch(TimestampedModel):
         ('MUSCLE_RECOVERY', 'Muscle Recovery'),
         ('REST_PERIODS', 'Rest Periods'),
         ('TRAINING_FREQUENCY', 'Training Frequency'),
+        ('BODY_MEASUREMENTS', 'Body Measurements'),
     ]
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     tags = models.JSONField(default=list, blank=True)

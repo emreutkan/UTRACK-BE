@@ -41,6 +41,7 @@ class CustomUser(AbstractUser, TimestampedModel):
     username = None
     email = models.EmailField(unique=True) ## abstract user already has an email field, but we need to make it unique so we override it
     is_verified = models.BooleanField(default=False)
+    gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female')], default='male', help_text="Gender for body fat calculations and recommendations")
 
     USERNAME_FIELD = 'email'  ## this tells Django that the email field is used for authentication instead of the username field
     REQUIRED_FIELDS = []
@@ -50,6 +51,7 @@ class CustomUser(AbstractUser, TimestampedModel):
 class UserProfile(TimestampedModel):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     body_weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Body weight in kg for calorie calculations")
+    height = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Height in cm")
 
 class SecurityStatus(TimestampedModel):
     """

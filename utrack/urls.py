@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/workout/', include('workout.urls')),
     path('api/supplements/', include('supplements.urls')),
     path('api/exercise/', include('exercise.url')),
+    path('api/measurements/', include('body_measurements.urls')),
     path('auth/', include('dj_rest_auth.urls')),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('auth/google/', GoogleLogin.as_view(), name='google_login'),

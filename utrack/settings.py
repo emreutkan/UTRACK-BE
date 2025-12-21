@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'exercise', # Add exercise app
     'workout', # Add workout app
     'supplements', # Add supplements app
+    'body_measurements', # Add body measurements app
     'django.contrib.sites',       # Required by allauth
     'allauth',
     'allauth.account',
@@ -240,3 +241,117 @@ REST_AUTH = {
 }
 
 SITE_ID = 1
+
+# Logging Configuration
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)  # Create logs directory if it doesn't exist
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+        'request': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'file_errors': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'errors.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 10,  # Keep 10 backup files
+            'formatter': 'verbose',
+        },
+        'file_info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'info.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 5,  # Keep 5 backup files
+            'formatter': 'simple',
+        },
+        'file_requests': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'requests.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 5,  # Keep 5 backup files
+            'formatter': 'request',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'console_debug': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file_info', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['file_errors', 'console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['file_info', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'utrack': {
+            'handlers': ['file_info', 'file_errors', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'utrack.requests': {
+            'handlers': ['file_requests', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'workout': {
+            'handlers': ['file_info', 'file_errors', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'user': {
+            'handlers': ['file_info', 'file_errors', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'exercise': {
+            'handlers': ['file_info', 'file_errors', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['file_info', 'file_errors', 'console'],
+        'level': 'INFO',
+    },
+}

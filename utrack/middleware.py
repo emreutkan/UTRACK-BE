@@ -1,45 +1,130 @@
 import json
+import logging
+import time
+from django.utils.deprecation import MiddlewareMixin
+from django.conf import settings
 
-class RequestResponseLogMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
+logger = logging.getLogger('utrack.requests')
+error_logger = logging.getLogger('utrack')
 
-    def __call__(self, request):
-        # Print Request info
-        print(f"\n🔴 [REQUEST] {request.method} {request.get_full_path()}")
+class RequestResponseLogMiddleware(MiddlewareMixin):
+    """
+    Logs all HTTP requests and responses with timing information.
+    Only logs request body/response for non-sensitive endpoints in production.
+    """
+    
+    # Endpoints where we don't want to log request/response bodies (sensitive data)
+    SENSITIVE_PATHS = [
+        '/api/user/login/',
+        '/api/user/register/',
+        '/auth/',
+        '/api/token/',
+    ]
+    
+    def process_request(self, request):
+        """Log incoming request"""
+        request.start_time = time.time()
         
-        # Try to print request body
-        if request.body:
+        # Get user info
+        user = getattr(request, 'user', None)
+        user_str = user.email if user and user.is_authenticated else 'anonymous'
+        
+        # Get IP address
+        ip = self.get_client_ip(request)
+        
+        # Log basic request info
+        logger.info(
+            f"REQUEST: {request.method} {request.get_full_path()} | "
+            f"User: {user_str} | IP: {ip}"
+        )
+        
+        # Log request body for non-sensitive endpoints (only in DEBUG mode or for specific endpoints)
+        if request.body and not self._is_sensitive_path(request.path):
             try:
                 body_str = request.body.decode('utf-8')
-                # Try to pretty print if it's JSON
-                try:
-                    body_json = json.loads(body_str)
-                    print(f"📦 Body: {json.dumps(body_json, indent=2)}")
-                except json.JSONDecodeError:
-                    print(f"📦 Body: {body_str}")
-            except Exception:
-                print("📦 Body: (binary or non-utf8)")
-
-        response = self.get_response(request)
-
-        # Print Response info
-        print(f"🟢 [RESPONSE] Status: {response.status_code}")
+                if body_str and len(body_str) < 1000:  # Only log small bodies
+                    try:
+                        body_json = json.loads(body_str)
+                        logger.debug(f"Request body: {json.dumps(body_json, indent=2)}")
+                    except json.JSONDecodeError:
+                        logger.debug(f"Request body: {body_str[:200]}")
+            except Exception as e:
+                logger.debug(f"Could not decode request body: {str(e)}")
         
-        # Try to print response content
-        if hasattr(response, 'content'):
+        return None
+    
+    def process_response(self, request, response):
+        """Log response with timing"""
+        if not hasattr(request, 'start_time'):
+            return response
+        
+        duration = int((time.time() - request.start_time) * 1000)  # Convert to milliseconds
+        
+        user = getattr(request, 'user', None)
+        user_str = user.email if user and user.is_authenticated else 'anonymous'
+        ip = self.get_client_ip(request)
+        
+        # Log response
+        log_level = 'warning' if response.status_code >= 400 else 'info'
+        log_message = (
+            f"RESPONSE: {request.method} {request.get_full_path()} | "
+            f"Status: {response.status_code} | "
+            f"Duration: {duration}ms | "
+            f"User: {user_str} | IP: {ip}"
+        )
+        
+        # Log response body in DEBUG mode (development)
+        if settings.DEBUG and not self._is_sensitive_path(request.path):
             try:
-                content_str = response.content.decode('utf-8')
-                # Try to pretty print if it's JSON
-                try:
-                    content_json = json.loads(content_str)
-                    print(f"📦 Content: {json.dumps(content_json, indent=2)}")
-                except json.JSONDecodeError:
-                    print(f"📦 Content: {content_str[:500]}...") # Truncate if too long
-            except Exception:
-                print("📦 Content: (binary or non-utf8)")
+                # Try to get response content
+                if hasattr(response, 'content'):
+                    content = response.content
+                    if content:
+                        try:
+                            content_str = content.decode('utf-8')
+                            # Only log if it's JSON and not too large
+                            if content_str.startswith('{') or content_str.startswith('['):
+                                try:
+                                    response_json = json.loads(content_str)
+                                    # Limit size to prevent huge logs
+                                    if len(content_str) < 5000:
+                                        logger.info(f"Response JSON:\n{json.dumps(response_json, indent=2)}")
+                                    else:
+                                        logger.info(f"Response JSON (truncated): {content_str[:500]}...")
+                                except json.JSONDecodeError:
+                                    # Not JSON, log as text (truncated)
+                                    logger.debug(f"Response body: {content_str[:200]}")
+                        except UnicodeDecodeError:
+                            pass
+            except Exception as e:
+                logger.debug(f"Could not log response body: {str(e)}")
+        
+        if log_level == 'warning':
+            logger.warning(log_message)
+            # Log error details for 5xx errors
+            if response.status_code >= 500:
+                error_logger.error(
+                    f"Server Error: {request.method} {request.get_full_path()} | "
+                    f"Status: {response.status_code} | User: {user_str}"
+                )
+        else:
+            logger.info(log_message)
         
         return response
+    
+    def get_client_ip(self, request):
+        """Get client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+    
+    def _is_sensitive_path(self, path):
+        """Check if path contains sensitive data"""
+        return any(sensitive in path for sensitive in self.SENSITIVE_PATHS)
+
 
 
 
