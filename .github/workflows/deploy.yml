@@ -47,7 +47,7 @@ jobs:
           # Create venv if it doesn't exist
           if [ ! -d "$PROJECT_DIR/venv" ]; then
             echo "Creating virtual environment..."
-            python3.14 -m venv "$PROJECT_DIR/venv"
+            python3 -m venv "$PROJECT_DIR/venv"
           else
             echo "Virtual environment found!"
           fi
