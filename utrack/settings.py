@@ -45,7 +45,7 @@ if not ALLOWED_HOSTS:
     else:
         # In production, if ALLOWED_HOSTS is empty, Django throws 400. 
         # Add a safe default or make sure your .env is loaded.
-        ALLOWED_HOSTS = ['16.16.248.86', 'localhost', '127.0.0.1']
+        ALLOWED_HOSTS = ['16.16.248.86', 'localhost', '127.0.0.1', 'api.utrack.irfanemreutkan.com']
 # Application definition
 
 INSTALLED_APPS = [
