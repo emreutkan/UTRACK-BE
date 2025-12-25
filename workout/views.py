@@ -318,11 +318,10 @@ class GetWorkoutView(APIView):
                 if cached_response is not None:
                     return Response(cached_response)
             
-            # Get all workouts with pagination and optimized queries
+            # Get all workouts with pagination and optimized queries (including rest days)
             workouts = Workout.objects.filter(
                 user=request.user, 
-                is_done=True, 
-                is_rest_day=False
+                is_done=True
             ).select_related('user').prefetch_related(
                 'workoutexercise_set__exercise',
                 'workoutexercise_set__sets'
@@ -509,18 +508,24 @@ class CompleteWorkoutView(APIView):
                 return Response({'error': 'Workout is already completed'}, status=status.HTTP_400_BAD_REQUEST)
                 
             # Update fields if provided
+            update_fields = ['is_done']
+            
             if 'duration' in request.data:
                 try:
                     workout.duration = int(request.data['duration'])
+                    update_fields.append('duration')
                 except (ValueError, TypeError):
                     return Response({'error': 'Duration must be an integer (seconds)'}, status=status.HTTP_400_BAD_REQUEST)
 
             if 'intensity' in request.data:
                 workout.intensity = request.data['intensity']
+                update_fields.append('intensity')
             if 'notes' in request.data:
                 workout.notes = request.data['notes']
+                update_fields.append('notes')
 
             workout.is_done = True
+            workout.save(update_fields=update_fields)
             
             # Calculate 1RM for all exercises in the workout
             workout_exercises = WorkoutExercise.objects.filter(workout=workout)
@@ -819,23 +824,6 @@ class TotalWorkoutsPerformedView(APIView):
              'workouts_performed_in_year': workouts_performed_in_year,
              'days_past_in_year': days_past_in_year})
 
-class CheckTodayRestDayView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        today = timezone.now().date()
-        rest_day = Workout.objects.filter(
-            user=request.user,
-            datetime__date=today,
-            is_rest_day=True
-        ).first()
-        
-        return Response({
-            'is_rest_day': rest_day is not None,
-            'date': today.isoformat(),
-            'rest_day_id': rest_day.id if rest_day else None
-        })
-
 class CheckWorkoutPerformedTodayView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -844,11 +832,23 @@ class CheckWorkoutPerformedTodayView(APIView):
         Check if a workout was performed today.
         
         Returns:
-        - If active workout exists (is_done=False): Error with active workout info
+        - If active workout exists (is_done=False): Active workout info (any date)
         - If rest day: Rest day info
         - If workout performed: Workout details
         - If nothing: No workout performed today
         """
+        # First check for ANY active workout in the system (not just today)
+        active_workout = Workout.objects.filter(
+            user=request.user,
+            is_done=False
+        ).first()
+        
+        if active_workout:
+            return Response({
+                'workout_performed': False,
+                'active_workout': True
+            }, status=status.HTTP_200_OK)
+        
         today = timezone.now().date()
         
         # Check for any workout today (completed or not)
@@ -864,18 +864,6 @@ class CheckWorkoutPerformedTodayView(APIView):
                 'message': 'No workout performed today'
             }, status=status.HTTP_200_OK)
         
-        # Check for active workout (not completed)
-        active_workout = today_workouts.filter(is_done=False).first()
-        
-        if active_workout:
-            return Response({
-                'error': 'ACTIVE_WORKOUT_EXISTS',
-                'workout_performed': False,
-                'active_workout_id': active_workout.id,
-                'active_workout_title': active_workout.title,
-                'message': 'Active workout exists but not completed yet'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         # Check for completed workouts (rest day or regular workout)
         completed_workout = today_workouts.filter(is_done=True).first()
         
@@ -883,11 +871,7 @@ class CheckWorkoutPerformedTodayView(APIView):
             if completed_workout.is_rest_day:
                 return Response({
                     'workout_performed': True,
-                    'is_rest_day': True,
-                    'date': today.isoformat(),
-                    'rest_day_id': completed_workout.id,
-                    'rest_day_title': completed_workout.title,
-                    'message': 'Rest day today'
+                    'is_rest': True
                 }, status=status.HTTP_200_OK)
             else:
                 # Regular workout performed

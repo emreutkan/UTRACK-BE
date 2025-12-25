@@ -7,6 +7,7 @@ from .serializers import SupplementSerializer, UserSupplementSerializer, UserSup
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.db.models import Q
+from django.utils import timezone
 class SupplementListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -44,7 +45,26 @@ class UserSupplementLogListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_supplement_logs = UserSupplementLog.objects.filter(user=request.user, is_active=True)
+        # Require user_supplement_id to filter by specific supplement
+        user_supplement_id = request.query_params.get('user_supplement_id')
+        
+        if not user_supplement_id:
+            return Response({
+                'error': 'user_supplement_id is required. Use query parameter: ?user_supplement_id=<id>'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Verify the user_supplement belongs to the user
+            user_supplement = UserSupplement.objects.get(id=user_supplement_id, user=request.user)
+        except UserSupplement.DoesNotExist:
+            return Response({'error': 'User supplement not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get logs for this specific supplement
+        user_supplement_logs = UserSupplementLog.objects.filter(
+            user=request.user,
+            user_supplement_id=user_supplement_id
+        ).order_by('-date', '-time')
+        
         serializer = UserSupplementLogSerializer(user_supplement_logs, many=True)
         return Response(serializer.data)
 
@@ -56,10 +76,31 @@ class UserSupplementLogListCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
   
+class UserSupplementLogTodayView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today = timezone.now().date()
+        
+        # Get all supplement logs for today
+        today_logs = UserSupplementLog.objects.filter(
+            user=request.user,
+            date=today
+        ).order_by('-time')
+        
+        serializer = UserSupplementLogSerializer(today_logs, many=True)
+        return Response({
+            'date': today.isoformat(),
+            'logs': serializer.data,
+            'count': today_logs.count()
+        })
+
 class UserSupplementLogDeleteView(APIView):
     permission_classes = [IsAuthenticated]
     def delete(self, request, log_id):
-        user_supplement_log = UserSupplementLog.objects.get(id=log_id, user=request.user, is_active=True)
-        user_supplement_log.is_active = False
-        user_supplement_log.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            user_supplement_log = UserSupplementLog.objects.get(id=log_id, user=request.user)
+            user_supplement_log.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except UserSupplementLog.DoesNotExist:
+            return Response({'error': 'Log not found'}, status=status.HTTP_404_NOT_FOUND)
