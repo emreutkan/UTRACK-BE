@@ -64,7 +64,7 @@ fi
 
 # 7. Setup Gunicorn systemd service
 echo "Setting up Gunicorn service..."
-sudo tee /etc/systemd/system/utrack.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/utrack.service > /dev/null <<'EOF'
 [Unit]
 Description=UTrack Django application
 After=network.target
@@ -72,11 +72,11 @@ After=network.target
 [Service]
 User=ubuntu
 Group=www-data
-WorkingDirectory=$PROJECT_DIR
-EnvironmentFile=$PROJECT_DIR/.env
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn \
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/venv/bin/gunicorn \
     --workers 3 \
-    --bind unix:$PROJECT_DIR/utrack.sock \
+    --bind unix:__PROJECT_DIR__/utrack.sock \
     --timeout 120 \
     --log-level debug \
     utrack.wsgi:application
@@ -86,28 +86,38 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
+# Replace placeholder with actual project directory
+sudo sed -i "s|__PROJECT_DIR__|$PROJECT_DIR|g" /etc/systemd/system/utrack.service
+
 # 8. Setup Nginx configuration
 echo "Setting up Nginx..."
-NGINX_HOST="\${EC2_HOST:-$ALLOWED_HOSTS}"
 
-sudo tee /etc/nginx/sites-available/utrack > /dev/null <<EOF
+# Determine the host string before writing the file
+if [ -n "$EC2_HOST" ]; then
+    FINAL_HOST="$EC2_HOST"
+else
+    FINAL_HOST="${ALLOWED_HOSTS:-*}"
+fi
+
+# Quoting 'EOF' prevents Bash from messing with the contents
+sudo tee /etc/nginx/sites-available/utrack > /dev/null <<'EOF'
 server {
     listen 80;
-    server_name $NGINX_HOST;
+    server_name __NGINX_HOST__;
 
     location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        alias $PROJECT_DIR/staticfiles/;
+        alias /home/ubuntu/utrack-backend/staticfiles/;
     }
 
     location /media/ {
-        alias $PROJECT_DIR/media/;
+        alias /home/ubuntu/utrack-backend/media/;
     }
 
     location / {
         include proxy_params;
-        proxy_pass http://unix:$PROJECT_DIR/utrack.sock;
+        proxy_pass http://unix:/home/ubuntu/utrack-backend/utrack.sock;
         proxy_read_timeout 120s;
         proxy_connect_timeout 120s;
     }
@@ -115,6 +125,9 @@ server {
     client_max_body_size 100M;
 }
 EOF
+
+# Swap the placeholder for the actual host variable
+sudo sed -i "s/__NGINX_HOST__/$FINAL_HOST/g" /etc/nginx/sites-available/utrack
 
 # 9. Enable Nginx site
 sudo ln -sf /etc/nginx/sites-available/utrack /etc/nginx/sites-enabled/

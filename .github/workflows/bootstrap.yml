@@ -29,5 +29,7 @@ jobs:
           export ALLOWED_HOSTS="${ALLOWED_HOSTS:-*}"
           
           # Download and run bootstrap script
-          curl -fsSL https://raw.githubusercontent.com/emreutkan/utrack-be/master/bootstrap.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/emreutkan/utrack-be/master/bootstrap.sh > bootstrap.sh
+          chmod +x bootstrap.sh
+          ./bootstrap.sh
 
