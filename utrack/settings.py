@@ -183,6 +183,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True # For dev, allow everyone. Safer than listing specific IPs if you move around.
 
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = ['https://api.utrack.irfanemreutkan.com']
+
 # Add Authentication Backends
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
