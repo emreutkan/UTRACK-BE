@@ -29,10 +29,10 @@ jobs:
             # This ensures any changes in GitHub Secrets are applied immediately
             cat > .env <<EOF
             SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
-            POSTGRES_DB="${{ secrets.DB_NAME }}"
-            POSTGRES_USER="${{ secrets.DB_USER }}"
-            POSTGRES_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            DATABASE_URL="postgres://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}"
+            POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+            POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            DATABASE_URL="postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ secrets.POSTGRES_DB }}"
             ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}"
             
             # Apple / iCloud Secrets

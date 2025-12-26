@@ -10,15 +10,15 @@ jobs:
       - name: Bootstrap via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.EC2_ELASTIC_IP }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           # Ensure 'envs' and 'env' are indented exactly under 'with'
-          envs: SECRET_KEY,DB_NAME,DB_USER,DB_PASSWORD,ALLOWED_HOSTS
+          envs: SECRET_KEY,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,ALLOWED_HOSTS
           env:
-            DB_NAME="${{ secrets.DB_NAME }}"
-            DB_USER="${{ secrets.DB_USER }}"
-            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+            POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
             SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
             ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}"
           script: |

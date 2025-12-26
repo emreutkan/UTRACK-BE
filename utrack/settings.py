@@ -89,7 +89,7 @@ elif LOCALHOST == 'False' and DATABASE_URL: # Localhost is False and DATABASE_UR
     DATABASES = {
         'default': env.db('DATABASE_URL')
     }
-    CSRF_TRUSTED_ORIGINS = [API_HOST]
+    CSRF_TRUSTED_ORIGINS = [API_HOST] # API_HOST is the domain name of the server or IP address of the server
     raise ValueError("DATABASE_URL is not set")
 elif LOCALHOST == 'False' and not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
