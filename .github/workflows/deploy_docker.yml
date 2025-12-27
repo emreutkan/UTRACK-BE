@@ -29,7 +29,7 @@ jobs:
             # This ensures any changes in GitHub Secrets are applied immediately
             # Using printf to safely handle special characters
             {
-              printf 'SECRET_KEY=%s\n' "${{ secrets.DJANGO_SECRET_KEY }}"
+              printf 'SECRET_KEY=%s\n' "${{ secrets.SECRET_KEY }}"
               printf 'POSTGRES_DB=%s\n' "${{ secrets.POSTGRES_DB }}"
               printf 'POSTGRES_USER=%s\n' "${{ secrets.POSTGRES_USER }}"
               printf 'POSTGRES_PASSWORD=%s\n' "${{ secrets.POSTGRES_PASSWORD }}"
@@ -53,8 +53,18 @@ jobs:
             
             # We make this commented out because postgre is set optinal and wont start if not requested, to allow local development with sqlite
             # docker compose up -d --build
-            docker compose --profile postgres up -d --build            
-
+            if ! docker compose --profile postgres up -d --build; then
+              echo "=== Docker compose failed, showing web container logs ==="
+              docker compose --profile postgres logs --tail=100 web || true
+              echo "=== Showing all container status ==="
+              docker compose --profile postgres ps -a || true
+              exit 1
+            fi
+            
+            # Wait a moment for container to start, then show logs
+            sleep 5
+            echo "=== Web container logs (last 50 lines) ==="
+            docker compose --profile postgres logs --tail=50 web || true
             
             # 4. Clean up old images to keep EC2 disk space free
             docker image prune -f

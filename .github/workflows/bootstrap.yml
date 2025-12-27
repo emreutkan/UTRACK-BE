@@ -21,7 +21,7 @@ jobs:
           POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
           POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
           POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
-          SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
+          SECRET_KEY="${{ secrets.SECRET_KEY }}"
           ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}"
           EC2_ELASTIC_IP="${{ secrets.EC2_ELASTIC_IP }}"
         script: |
