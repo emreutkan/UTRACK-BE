@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
-from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from .serializers import RegisterSerializer, UserSerializer
@@ -156,7 +156,7 @@ class RequestPasswordResetView(APIView):
         POST /api/user/request-password-reset/
         Request password reset - generates token for password reset
         Requires: email
-        Returns: token and uid (for development/testing - can be replaced with email sending)
+        Returns: success message (token should be sent via email in production)
         """
         email = request.data.get('email')
         
@@ -178,12 +178,11 @@ class RequestPasswordResetView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         
         # TODO: Send email with reset link here
-        # For now, return token in response (remove in production!)
+        # In production, send email with reset link instead of returning token
+        # For security, don't return token in response
+        
         return Response({
-            'message': 'Password reset token generated',
-            'uid': uid,
-            'token': token,
-            'reset_url': f'/api/user/reset-password/?uid={uid}&token={token}'
+            'message': 'If an account with this email exists, a password reset link has been sent.'
         }, status=status.HTTP_200_OK)
 
 class ResetPasswordView(APIView):
