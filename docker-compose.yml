@@ -37,7 +37,7 @@ services:
             DATABASE_URL: ${DATABASE_URL} # database url: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
             LOCALHOST: ${LOCALHOST} # localhost: true or false
         healthcheck:
-            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+            test: ["CMD", "python", "-c", "import urllib.request; r = urllib.request.urlopen('http://localhost:8000/'); exit(0 if r.getcode() < 500 else 1)"]
             interval: 10s
             timeout: 5s
             retries: 5
