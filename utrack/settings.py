@@ -47,18 +47,22 @@ API_HOST = env('API_HOST')
 POSTGRES_USER = env('POSTGRES_USER')
 POSTGRES_PASSWORD = env('POSTGRES_PASSWORD')
 POSTGRES_DB = env('POSTGRES_DB')
-DB_HOST = env('DB_HOST')
-DB_PORT = env('DB_PORT')
 LOCALHOST = env('LOCALHOST')
 # Suppress specific warnings from dj_rest_auth regarding allauth deprecations
 warnings.filterwarnings('ignore', message='.*app_settings.USERNAME_REQUIRED is deprecated.*')
 warnings.filterwarnings('ignore', message='.*app_settings.EMAIL_REQUIRED is deprecated.*')
 
-
-DB_HOST = 'db' if LOCALHOST == 'True' else env('DB_HOST')
-DB_PORT = 5432 if LOCALHOST == 'True' else env('DB_PORT')
+# DB_HOST and DB_PORT are set conditionally based on LOCALHOST and DATABASE_URL
+# Initialize with defaults to avoid errors if not set in .env
+DB_HOST = env('DB_HOST', default='localhost')
+DB_PORT = env('DB_PORT', default='5432')
+# Build DATABASE_URL if not already set and we have the components
 if POSTGRES_USER and POSTGRES_PASSWORD and POSTGRES_DB:
-    DATABASE_URL = f"postgres://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{DB_HOST}:{DB_PORT}/{POSTGRES_DB}"
+    # Check if DATABASE_URL is already set (from .env), if not, build it
+    try:
+        DATABASE_URL = env('DATABASE_URL')
+    except:
+        DATABASE_URL = f"postgres://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{DB_HOST}:{DB_PORT}/{POSTGRES_DB}"
 
 
 if LOCALHOST == 'True' and not DATABASE_URL:
